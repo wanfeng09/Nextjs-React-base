@@ -15,12 +15,12 @@ import { formatCurrency } from './utils';
  * 注意： unstable_noStore 是一个实验性 API，将来可能会更改。
  * 如果您希望在自己的项目中使用稳定的 API，也可以使用 Segment Config Option export const dynamic = "force-dynamic" 。
  */
-import { unstable_noStore as noStore } from 'next/cache';
+// import { unstable_noStore as noStore } from 'next/cache';
 
 export async function fetchRevenue() {
   // Add noStore() here to prevent the response from being cached.此处添加 noStore() 以防止响应被缓存。
   // This is equivalent to in fetch(..., {cache: 'no-store'}).
-  noStore();
+  // noStore();
 
   try {
     // Artificially delay a response for demo purposes.
@@ -42,7 +42,7 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   // 此处添加 noStore() 以防止响应被缓存。
-  noStore();
+  // noStore();
   try {
     const data = await sql<LatestInvoiceRaw>`
       SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
@@ -64,7 +64,7 @@ export async function fetchLatestInvoices() {
 
 export async function fetchCardData() {
    // 此处添加 noStore() 以防止响应被缓存。
-   noStore();
+  //  noStore();
   try {
     // You can probably combine these into a single SQL query
     // However, we are intentionally splitting them to demonstrate
@@ -105,7 +105,7 @@ export async function fetchFilteredInvoices(
   currentPage: number,
 ) {
    // 此处添加 noStore() 以防止响应被缓存。
-   noStore();
+  //  noStore();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
@@ -139,7 +139,7 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
    // 此处添加 noStore() 以防止响应被缓存。
-   noStore();
+  //  noStore();
   try {
     const count = await sql`SELECT COUNT(*)
     FROM invoices
@@ -162,7 +162,7 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
    // 此处添加 noStore() 以防止响应被缓存。
-   noStore();
+  //  noStore();
   try {
     const data = await sql<InvoiceForm>`
       SELECT
@@ -173,13 +173,13 @@ export async function fetchInvoiceById(id: string) {
       FROM invoices
       WHERE invoices.id = ${id};
     `;
-
+    
     const invoice = data.rows.map((invoice) => ({
       ...invoice,
       // Convert amount from cents to dollars
       amount: invoice.amount / 100,
     }));
-
+    // console.log(invoice);
     return invoice[0];
   } catch (error) {
     console.error('Database Error:', error);

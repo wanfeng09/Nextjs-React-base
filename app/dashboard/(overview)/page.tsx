@@ -4,7 +4,7 @@
  * 它们目前被注释掉，以防止应用程序出错。
  * 
  */
-import { Card } from '@/app/ui/dashboard/cards';
+// import { Card } from '@/app/ui/dashboard/cards';
 import RevenueChart from '@/app/ui/dashboard/revenue-chart';
 import LatestInvoices from '@/app/ui/dashboard/latest-invoices';
 import { lusitana } from '@/app/ui/fonts';
@@ -18,6 +18,9 @@ import { Suspense } from 'react';
 import { RevenueChartSkeleton,LatestInvoicesSkeleton,CardsSkeleton } from '@/app/ui/skeletons';
 
 import CardWrapper from '@/app/ui/dashboard/cards';
+
+// 配置页面、布局或路由处理程序的行为
+export const dynamic = "force-dynamic"
  
 export default async function Page() {
     // delete this line
