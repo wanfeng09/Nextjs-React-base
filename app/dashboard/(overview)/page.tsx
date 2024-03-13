@@ -19,6 +19,12 @@ import { RevenueChartSkeleton,LatestInvoicesSkeleton,CardsSkeleton } from '@/app
 
 import CardWrapper from '@/app/ui/dashboard/cards';
 
+import { Metadata } from 'next';
+ 
+export const metadata: Metadata = {
+  title: 'Home',
+};
+
 // 配置页面、布局或路由处理程序的行为
 export const dynamic = "force-dynamic"
  

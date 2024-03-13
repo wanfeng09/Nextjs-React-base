@@ -10,18 +10,64 @@ import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 // 重定向
 import { redirect } from 'next/navigation';
+// const FormSchema = z.object({
+//   id: z.string(),
+//   customerId: z.string(),
+//   amount: z.coerce.number(), // 强制（更改）从字符串转换为数字，同时验证其类型
+//   status: z.enum(['pending', 'paid']),
+//   date: z.string(),
+// });
+
+import { signIn } from '@/auth';
+import { AuthError } from 'next-auth';
+
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string(),
-  amount: z.coerce.number(), // 强制（更改）从字符串转换为数字，同时验证其类型
-  status: z.enum(['pending', 'paid']),
+  customerId: z.string({
+    invalid_type_error: 'Please select a customer.',
+  }),
+  amount: z.coerce
+    .number()
+    .gt(0, { message: 'Please enter an amount greater than $0.' }),
+  status: z.enum(['pending', 'paid'], {
+    invalid_type_error: 'Please select an invoice status.',
+  }),
   date: z.string(),
 });
+// This is temporary until @types/react-dom is updated
+export type State = {
+  errors?: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+  };
+  message?: string | null;
+};
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn('credentials', formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case 'CredentialsSignin':
+          return 'Invalid credentials.';
+        default:
+          return 'Something went wrong.';
+      }
+    }
+    throw error;
+  }
+}
+
 // 在文件中 actions.ts ，创建一个新的异步函数，该函数接受 formData
-export async function createInvoice(formData: FormData) {
+export async function createInvoice(prevState: State, formData: FormData) {
   // 获取所需字段
   // const rawFormData = {
   //   customerId: formData.get('customerId'),
@@ -34,11 +80,28 @@ export async function createInvoice(formData: FormData) {
   // console.log(rawFormData);
   // console.log(typeof rawFormData.amount); // string ts正确是number
 
-  const { customerId, amount, status } = CreateInvoice.parse({
+   // 使用 Zod 验证表单字段
+   const validatedFields = CreateInvoice.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
+
+   // 如果表单验证失败，则尽早返回错误。否则，继续。
+   if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Create Invoice.',
+    };
+  }
+  // 准备数据以插入数据库
+  const { customerId, amount, status } = validatedFields.data;
+
+  // const { customerId, amount, status } = CreateInvoice.parse({
+  //   customerId: formData.get('customerId'),
+  //   amount: formData.get('amount'),
+  //   status: formData.get('status'),
+  // });
   const amountInCents = amount * 100;
   // 格式为“YYYY-MM-DD”的新日期
   const date = new Date().toISOString().split('T')[0];
@@ -64,12 +127,26 @@ export async function createInvoice(formData: FormData) {
   redirect('/dashboard/invoices');
 }
 
-export async function updateInvoice(id: string, formData: FormData) {
-  const { customerId, amount, status } = UpdateInvoice.parse({
+export async function updateInvoice(id: string, prevState: State, formData: FormData) {
+  const validatedFields = UpdateInvoice.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
+ 
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Update Invoice.',
+    };
+  }
+ 
+  const { customerId, amount, status } = validatedFields.data;
+  // const { customerId, amount, status } = UpdateInvoice.parse({
+  //   customerId: formData.get('customerId'),
+  //   amount: formData.get('amount'),
+  //   status: formData.get('status'),
+  // });
 
   const amountInCents = amount * 100;
 
@@ -87,5 +164,14 @@ export async function updateInvoice(id: string, formData: FormData) {
   redirect('/dashboard/invoices');
 }
 export async function deleteInvoice(id: string) {
-    throw new Error('Failed to Delete Invoice');
+    // throw new Error('Failed to Delete Invoice');
+    try {
+      await sql`DELETE FROM invoices WHERE id = ${id}`;
+      revalidatePath('/dashboard/invoices');
+      return { message: 'Deleted Invoice' };
+    } catch (error) {
+      return { message: 'Database Error: Failed to Delete Invoice' };
+    }
 }
+
+
